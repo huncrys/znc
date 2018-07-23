@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 #include "IRCTest.h"
+#include <znc/Query.h>
 #include <algorithm>
 
 using testing::ElementsAre;
@@ -129,6 +130,22 @@ TEST_F(IRCSockTest, OnActionMessage) {
     EXPECT_CALL(testModule, OnPrivCTCPMessage(_)).WillOnce(HAL);
     m_pTestSock->ReadLine(msg.ToString());
     EXPECT_THAT(m_pTestClient->vsLines, IsEmpty());
+}
+
+TEST_F(IRCSockTest, OnSelfActionMessage) {
+    m_pTestUser->SetAutoClearQueryBuffer(false);
+
+    CMessage msg(":me PRIVMSG someone :\001ACTION hello\001");
+    m_pTestSock->ReadLine(msg.ToString());
+
+    EXPECT_THAT(m_pTestModule->vsHooks, ElementsAre("OnUserActionMessage"));
+    EXPECT_THAT(m_pTestModule->vsMessages, ElementsAre(msg.ToString()));
+    EXPECT_THAT(m_pTestModule->vNetworks, ElementsAre(m_pTestNetwork));
+    EXPECT_THAT(m_pTestModule->vChannels, ElementsAre(nullptr));
+
+    CQuery* pQuery = m_pTestNetwork->FindQuery("someone");
+    ASSERT_NE(pQuery, nullptr);
+    EXPECT_EQ(pQuery->GetBuffer().Size(), 1u);
 }
 
 TEST_F(IRCSockTest, OnAwayMessage) {
@@ -431,6 +448,22 @@ TEST_F(IRCSockTest, OnTextMessage) {
     m_pTestSock->ReadLine(msg.ToString());
 
     EXPECT_THAT(m_pTestClient->vsLines, ElementsAre(msg.ToString()));
+}
+
+TEST_F(IRCSockTest, OnSelfTextMessage) {
+    m_pTestUser->SetAutoClearQueryBuffer(false);
+
+    CMessage msg(":me PRIVMSG someone :hello");
+    m_pTestSock->ReadLine(msg.ToString());
+
+    EXPECT_THAT(m_pTestModule->vsHooks, ElementsAre("OnUserTextMessage"));
+    EXPECT_THAT(m_pTestModule->vsMessages, ElementsAre(msg.ToString()));
+    EXPECT_THAT(m_pTestModule->vNetworks, ElementsAre(m_pTestNetwork));
+    EXPECT_THAT(m_pTestModule->vChannels, ElementsAre(nullptr));
+
+    CQuery* pQuery = m_pTestNetwork->FindQuery("someone");
+    ASSERT_NE(pQuery, nullptr);
+    EXPECT_EQ(pQuery->GetBuffer().Size(), 1u);
 }
 
 TEST_F(IRCSockTest, OnTopicMessage) {
