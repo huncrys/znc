@@ -4,9 +4,6 @@
 [submodule "third_party/googletest"]
 	path = third_party/googletest
 	url = https://github.com/google/googletest
-[submodule "docker"]
-	path = docker
-	url = https://github.com/znc/znc-docker
 [submodule "third_party/cctz"]
 	path = third_party/cctz
 	url = https://github.com/google/cctz
