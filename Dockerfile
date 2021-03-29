@@ -37,11 +37,11 @@ RUN cd /znc-src \
 RUN \
  echo "**** determine runtime packages ****" && \
  scanelf --needed --nobanner /tmp/znc/usr/bin/znc \
-	| awk '{ gsub(/,/, "\nso:", $2); print "so:" $2 }' \
-	| sort -u \
-	| xargs -r apk info --installed \
-	| sort -u \
-	>> /tmp/znc/packages
+    | awk '{ gsub(/,/, "\nso:", $2); print "so:" $2 }' \
+    | sort -u \
+    | xargs -r apk info --installed \
+    | sort -u \
+    >> /tmp/znc/packages
 
 FROM alpine:3.13
 
@@ -53,10 +53,17 @@ RUN \
  RUNTIME_PACKAGES=$(echo $(cat /packages)) && \
  apk add --no-cache \
     su-exec \
-	ca-certificates \
+    ca-certificates \
     tini \
     oidentd \
-	${RUNTIME_PACKAGES}
+    python3 \
+    tcl \
+    perl \
+    cyrus-sasl \
+    icu \
+    gettext \
+    boost \
+    ${RUNTIME_PACKAGES}
 
 RUN adduser -S znc -h /znc-data && addgroup -S znc
 
