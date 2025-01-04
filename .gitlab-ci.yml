@@ -1,22 +1,66 @@
 stages:
   - build
+  - manifest
+
+variables:
+  CI_IMAGE_NAME: huncrys/znc
+  GIT_SUBMODULE_STRATEGY: recursive
 
 build:
   stage: build
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]
+  parallel:
+    matrix:
+      - CI_ARCH: [amd64, arm64]
   script:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"${CI_DOCKERHUB_AUTH}\"}}}" > /kaniko/.docker/config.json
+    - BUILD_DATE="$(date '+%FT%T%z' | sed -E -n 's/(\+[0-9]{2})([0-9]{2})$/\1:\2/p')" #rfc 3339 date
+    - BUILD_TITLE="$(echo "${CI_PROJECT_TITLE}" | tr " " "_")"
     - >-
       /kaniko/executor
+      --label build-date="${BUILD_DATE}"
+      --label org.opencontainers.image.authors="${CI_SERVER_URL}/${GITLAB_USER_LOGIN}"
+      --label org.opencontainers.image.created="${BUILD_DATE}"
+      --label org.opencontainers.image.description="${BUILD_TITLE}"
+      --label org.opencontainers.image.documentation="${CI_PROJECT_URL}"
+      --label org.opencontainers.image.licenses="${CI_PROJECT_URL}"
+      --label org.opencontainers.image.ref.name="${CI_COMMIT_SHA}"
+      --label org.opencontainers.image.revision="${CI_COMMIT_SHA}"
+      --label org.opencontainers.image.source="${CI_PROJECT_URL}"
+      --label org.opencontainers.image.title="${BUILD_TITLE}"
+      --label org.opencontainers.image.url="${CI_PROJECT_URL}"
+      --label org.opencontainers.image.vendor="${CI_SERVER_URL}/${GITLAB_USER_LOGIN}"
+      --label org.opencontainers.image.version="${CI_COMMIT_SHA}"
+      --label vcs-url="${CI_PROJECT_URL}"
       --context "${CI_PROJECT_DIR}"
       --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
-      --destination "huncrys/znc:${CI_COMMIT_SHORT_SHA}"
-      --destination "huncrys/znc"
+      --destination "${CI_IMAGE_NAME}:${CI_ARCH}-${CI_COMMIT_SHORT_SHA}"
+      --destination "${CI_IMAGE_NAME}:${CI_ARCH}"
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  tags:
+    - "platform:linux/${CI_ARCH}"
 
-variables:
-  GIT_SUBMODULE_STRATEGY: recursive
+manifest:
+  image:
+    name: mplatform/manifest-tool:alpine
+    entrypoint: [""]
+  stage: manifest
+  script:
+    - mkdir -p /root/.docker
+    - echo "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"${CI_DOCKERHUB_AUTH}\"}}}" > /root/.docker/config.json
+    - >-
+      manifest-tool push from-args
+      --platforms linux/amd64,linux/arm64
+      --template "${CI_IMAGE_NAME}:ARCH-${CI_COMMIT_SHORT_SHA}"
+      --target "${CI_IMAGE_NAME}:${CI_COMMIT_SHORT_SHA}"
+    - >-
+      manifest-tool push from-args
+      --platforms linux/amd64,linux/arm64
+      --template "${CI_IMAGE_NAME}:ARCH"
+      --target "${CI_IMAGE_NAME}:latest"
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
