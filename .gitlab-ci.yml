@@ -4,4 +4,6 @@ variables:
 
 include:
   - component: $CI_SERVER_FQDN/oaklab/ci-templates/kaniko-build@~latest
+    inputs:
+      licenses: Apache-2.0
   - component: $CI_SERVER_FQDN/oaklab/ci-templates/manifest-tool-manifest@~latest
