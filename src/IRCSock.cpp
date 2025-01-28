@@ -1418,7 +1418,14 @@ void CIRCSock::ParseISupport(const CMessage& Message) {
             break;
         }
 
-        m_mISupport[sName] = sValue;
+        bool bAdding = '-' != sName[0];
+        if (bAdding) {
+             m_mISupport[sName] = sValue;
+         } else {
+            sName.LeftChomp();
+            m_mISupport.erase(sName);
+            return;
+        }
 
         if (sName.Equals("PREFIX")) {
             CString sPrefixes = sValue.Token(1, false, ")");
