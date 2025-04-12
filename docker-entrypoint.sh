@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "${1:0:1}" != '-' ]; then
+if [ "$(printf '%s' "$1" | cut -c 1)" != '-' ]; then
     exec "$@"
 fi
 
@@ -12,5 +12,5 @@ if [ "$(id -u)" = '0' ]; then
     exec su-exec znc:znc /entrypoint.sh "$@"
 fi
 
-{ /usr/sbin/oidentd -i -P `route | awk '/^default\s+/ { print $2 }'` &> "$DATADIR/.oidentd.log" & } || exit 33
+{ /usr/sbin/oidentd -i -P "$(route | awk '/^default\s+/ { print $2 }')" > "$DATADIR/.oidentd.log" 2>&1 & } || exit 33
 znc --foreground --datadir "$DATADIR" "$@"
